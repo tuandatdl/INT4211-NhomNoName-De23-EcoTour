@@ -136,7 +136,7 @@ erDiagram
 
     huong_dan_vien {
         int id PK
-        int nguoi_dung_id UK_FK
+        int nguoi_dung_id FK
         string ho_ten
         string ngon_ngu
         string chung_chi
@@ -207,7 +207,7 @@ erDiagram
 
     danh_gia {
         int id PK
-        int dat_cho_id UK_FK
+        int dat_cho_id FK
         int so_sao_tour
         int so_sao_hdv
         text noi_dung
