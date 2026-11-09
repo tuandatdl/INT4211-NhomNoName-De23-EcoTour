@@ -132,4 +132,123 @@ router.post('/', xacThuc, async (req, res) => {
   }
 });
 
+// GET /dat-cho - Lay danh sach don dat cho (QUAN_TRI, DIEU_HANH)
+router.get('/', xacThuc, choPhep('QUAN_TRI', 'DIEU_HANH'), async (req, res) => {
+  const { suatId, trangThai } = req.query;
+  let sql = `
+    SELECT dc.id, dc.suat_id, dc.khach_id, dc.so_nguoi_lon, dc.so_tre_em, dc.tong_tien,
+           dc.tien_hoan, dc.ma_ve, dc.trang_thai, dc.dat_luc,
+           nd.ho_ten AS ho_ten_khach, nd.sdt AS sdt_khach, nd.email AS email_khach,
+           t.ten AS ten_tour, s.ngay_di, s.gio_tap_trung, s.diem_tap_trung
+    FROM dat_cho dc
+    JOIN nguoi_dung nd ON nd.id = dc.khach_id
+    JOIN suat_khoi_hanh s ON s.id = dc.suat_id
+    JOIN tour t ON t.id = s.tour_id
+    WHERE 1=1
+  `;
+  const params = [];
+  if (suatId) {
+    params.push(Number(suatId));
+    sql += ` AND dc.suat_id = $${params.length}`;
+  }
+  if (trangThai) {
+    params.push(trangThai);
+    sql += ` AND dc.trang_thai = $${params.length}`;
+  }
+  sql += ` ORDER BY dc.id DESC`;
+
+  try {
+    const r = await truyVan(sql, params);
+    return res.status(200).json(r.rows);
+  } catch (e) {
+    return res.status(500).json({ loi: 'Lỗi máy chủ khi lấy danh sách đặt chỗ' });
+  }
+});
+
+// GET /dat-cho/cua-toi - Lay danh sach don dat cho cua chinh khach hang dang dang nhap
+router.get('/cua-toi', xacThuc, async (req, res) => {
+  try {
+    const sql = `
+      SELECT dc.id, dc.suat_id, dc.so_nguoi_lon, dc.so_tre_em, dc.tong_tien,
+             dc.tien_hoan, dc.ma_ve, dc.trang_thai, dc.dat_luc,
+             t.id AS tour_id, t.ten AS ten_tour, t.anh_url AS anh_tour,
+             s.ngay_di, s.gio_tap_trung, s.diem_tap_trung, s.phuong_tien
+      FROM dat_cho dc
+      JOIN suat_khoi_hanh s ON s.id = dc.suat_id
+      JOIN tour t ON t.id = s.tour_id
+      WHERE dc.khach_id = $1
+      ORDER BY dc.id DESC
+    `;
+    const r = await truyVan(sql, [req.nguoiDung.id]);
+    return res.status(200).json(r.rows);
+  } catch (e) {
+    return res.status(500).json({ loi: 'Lỗi máy chủ khi lấy danh sách đặt chỗ của bạn' });
+  }
+});
+
+// GET /dat-cho/:id/ve - Lay thong tin ve dien tu QR kem hanh khach, dich vu va diem danh
+router.get('/:id/ve', xacThuc, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const dcRes = await truyVan(
+      `SELECT dc.id, dc.suat_id, dc.khach_id, dc.so_nguoi_lon, dc.so_tre_em,
+              dc.tong_tien, dc.tien_hoan, dc.ma_ve, dc.trang_thai, dc.dat_luc,
+              nd.ho_ten AS ho_ten_khach, nd.sdt AS sdt_khach,
+              t.ten AS ten_tour, t.so_ngay,
+              s.ngay_di, s.gio_tap_trung, s.diem_tap_trung, s.phuong_tien,
+              hdv.ho_ten AS ho_ten_hdv, hdv.sdt AS sdt_hdv
+       FROM dat_cho dc
+       JOIN nguoi_dung nd ON nd.id = dc.khach_id
+       JOIN suat_khoi_hanh s ON s.id = dc.suat_id
+       JOIN tour t ON t.id = s.tour_id
+       LEFT JOIN huong_dan_vien hdv ON hdv.id = s.hdv_id
+       WHERE dc.id = $1`,
+      [id]
+    );
+
+    if (dcRes.rowCount === 0) {
+      return res.status(404).json({ loi: 'Không tìm thấy vé hoặc đơn đặt chỗ' });
+    }
+
+    const donDat = dcRes.rows[0];
+
+    // Kiem tra quyen: chu don hoac QUAN_TRI / DIEU_HANH
+    const laChuDon = donDat.khach_id === req.nguoiDung.id;
+    const laNhanVien = ['QUAN_TRI', 'DIEU_HANH'].includes(req.nguoiDung.vaiTro);
+    if (!laChuDon && !laNhanVien) {
+      return res.status(403).json({ loi: 'Bạn không có quyền xem vé này' });
+    }
+
+    // Lay danh sach hanh khach va trang thai diem danh
+    const hkRes = await truyVan(
+      `SELECT hk.id, hk.ho_ten, hk.nam_sinh, hk.cccd, hk.loai_ve,
+              dd.id AS diem_danh_id, dd.thoi_diem AS thoi_diem_diem_danh
+       FROM hanh_khach hk
+       LEFT JOIN diem_danh_tour dd ON dd.hanh_khach_id = hk.id AND dd.dat_cho_id = hk.dat_cho_id
+       WHERE hk.dat_cho_id = $1
+       ORDER BY hk.id ASC`,
+      [id]
+    );
+
+    // Lay danh sach dich vu kem theo
+    const dvRes = await truyVan(
+      `SELECT dv.id, dv.ten, dv.gia, dv.don_vi, ddv.so_luong
+       FROM dat_dich_vu ddv
+       JOIN dich_vu_kem dv ON dv.id = ddv.dich_vu_id
+       WHERE ddv.dat_cho_id = $1`,
+      [id]
+    );
+
+    return res.status(200).json({
+      ...donDat,
+      hanh_khach: hkRes.rows,
+      dich_vu_kem: dvRes.rows,
+      da_diem_danh_du: hkRes.rows.length > 0 && hkRes.rows.every((hk) => hk.diem_danh_id !== null)
+    });
+  } catch (e) {
+    return res.status(500).json({ loi: 'Lỗi máy chủ khi lấy thông tin vé điện tử' });
+  }
+});
+
 module.exports = router;
