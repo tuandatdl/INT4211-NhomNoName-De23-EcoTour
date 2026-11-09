@@ -25,6 +25,18 @@
             android:name=".ui.auth.MainActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.datcho.DatChoListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.datcho.QuetQrDiemDanhActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.baocao.BaoCaoChartActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
