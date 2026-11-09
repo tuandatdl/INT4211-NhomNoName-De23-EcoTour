@@ -347,4 +347,122 @@ router.patch('/:id/huy', xacThuc, async (req, res) => {
   }
 });
 
+// POST /dat-cho/diem-danh - Quet ma QR diem danh khach len xe/tau
+async function xuLyDiemDanhTour(req, res) {
+  const { maVe, datChoId, hanhKhachId } = req.body;
+  const nguoiQuetId = req.nguoiDung.id;
+
+  if (!maVe && !datChoId) {
+    return res.status(400).json({ loi: 'Vui lòng cung cấp mã vé QR (maVe) hoặc mã đơn đặt chỗ (datChoId)' });
+  }
+
+  try {
+    let sql = `
+      SELECT dc.id, dc.suat_id, dc.khach_id, dc.ma_ve, dc.trang_thai,
+             nd.ho_ten AS ho_ten_khach, nd.sdt AS sdt_khach,
+             t.ten AS ten_tour, s.ngay_di, s.gio_tap_trung, s.diem_tap_trung
+      FROM dat_cho dc
+      JOIN nguoi_dung nd ON nd.id = dc.khach_id
+      JOIN suat_khoi_hanh s ON s.id = dc.suat_id
+      JOIN tour t ON t.id = s.tour_id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (maVe) {
+      params.push(maVe.trim());
+      sql += ` AND dc.ma_ve = $${params.length}`;
+    } else {
+      params.push(Number(datChoId));
+      sql += ` AND dc.id = $${params.length}`;
+    }
+
+    const dcRes = await truyVan(sql, params);
+    if (dcRes.rowCount === 0) {
+      return res.status(404).json({ loi: 'Vé hoặc đơn đặt chỗ không tồn tại trong hệ thống' });
+    }
+
+    const donDat = dcRes.rows[0];
+    if (donDat.trang_thai === 'DA_HUY') {
+      return res.status(409).json({ loi: 'Vé này đã bị hủy, không thể lên xe/tau' });
+    }
+
+    // Lay danh sach hanh khach cua don
+    const hkRes = await truyVan(
+      `SELECT hk.id, hk.ho_ten, hk.loai_ve, hk.cccd,
+              dd.id AS diem_danh_id, dd.thoi_diem AS thoi_diem_diem_danh
+       FROM hanh_khach hk
+       LEFT JOIN diem_danh_tour dd ON dd.hanh_khach_id = hk.id AND dd.dat_cho_id = hk.dat_cho_id
+       WHERE hk.dat_cho_id = $1
+       ORDER BY hk.id ASC`,
+      [donDat.id]
+    );
+
+    if (hkRes.rowCount === 0) {
+      return res.status(400).json({ loi: 'Đơn đặt chỗ không có dữ liệu hành khách' });
+    }
+
+    const danhSachHanhKhach = hkRes.rows;
+    let hanhKhachCanDiemDanh = [];
+
+    if (hanhKhachId) {
+      const timHk = danhSachHanhKhach.find((h) => h.id === Number(hanhKhachId));
+      if (!timHk) {
+        return res.status(404).json({ loi: `Không tìm thấy hành khách ID ${hanhKhachId} trong đoàn này` });
+      }
+      if (timHk.diem_danh_id) {
+        return res.status(200).json({
+          thongBao: 'Hành khách này đã được điểm danh trước đó',
+          donDat,
+          hanhKhach: danhSachHanhKhach
+        });
+      }
+      hanhKhachCanDiemDanh.push(timHk);
+    } else {
+      // Quet theo maVe doan: diem danh cho tat ca hanh khach chua duoc diem danh
+      hanhKhachCanDiemDanh = danhSachHanhKhach.filter((h) => !h.diem_danh_id);
+    }
+
+    // Ghi nhan diem danh vao bang diem_danh_tour
+    for (const hk of hanhKhachCanDiemDanh) {
+      await truyVan(
+        `INSERT INTO diem_danh_tour (dat_cho_id, hanh_khach_id, thoi_diem, nguoi_quet_id)
+         VALUES ($1, $2, NOW(), $3)`,
+        [donDat.id, hk.id, nguoiQuetId]
+      );
+    }
+
+    // Cap nhat trang thai don dat cho thanh DA_CHECKIN neu chua cap nhat
+    if (donDat.trang_thai !== 'DA_CHECKIN') {
+      await truyVan("UPDATE dat_cho SET trang_thai = 'DA_CHECKIN' WHERE id = $1", [donDat.id]);
+    }
+
+    // Lay lai danh sach hanh khach cap nhat
+    const hkCapNhatRes = await truyVan(
+      `SELECT hk.id, hk.ho_ten, hk.loai_ve, hk.cccd,
+              dd.id AS diem_danh_id, dd.thoi_diem AS thoi_diem_diem_danh
+       FROM hanh_khach hk
+       LEFT JOIN diem_danh_tour dd ON dd.hanh_khach_id = hk.id AND dd.dat_cho_id = hk.dat_cho_id
+       WHERE hk.dat_cho_id = $1
+       ORDER BY hk.id ASC`,
+      [donDat.id]
+    );
+
+    return res.status(201).json({
+      thongBao: `Điểm danh thành công cho ${hanhKhachCanDiemDanh.length} hành khách`,
+      soKhachVuaDiemDanh: hanhKhachCanDiemDanh.length,
+      tongKhachTrongDoan: danhSachHanhKhach.length,
+      donDat: {
+        ...donDat,
+        trang_thai: 'DA_CHECKIN'
+      },
+      danhSachHanhKhach: hkCapNhatRes.rows
+    });
+  } catch (e) {
+    return res.status(500).json({ loi: e.message || 'Lỗi máy chủ khi quét QR điểm danh' });
+  }
+}
+
+router.post('/diem-danh', xacThuc, choPhep('QUAN_TRI', 'DIEU_HANH'), xuLyDiemDanhTour);
+
 module.exports = router;
+module.exports.xuLyDiemDanhTour = xuLyDiemDanhTour;
