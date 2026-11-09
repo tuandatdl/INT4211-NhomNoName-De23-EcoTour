@@ -251,4 +251,100 @@ router.get('/:id/ve', xacThuc, async (req, res) => {
   }
 });
 
+// PATCH /dat-cho/:id/huy - Huy dat tour va tu dong tinh tien hoan theo chinh sach
+router.patch('/:id/huy', xacThuc, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const ketQua = await trongGiaoDich(async (client) => {
+      // 1. Khoa dong don dat cho va lay thong tin khoi hanh
+      const donRes = await client.query(
+        `SELECT dc.*, s.ngay_di, s.gio_tap_trung
+         FROM dat_cho dc
+         JOIN suat_khoi_hanh s ON s.id = dc.suat_id
+         WHERE dc.id = $1
+         FOR UPDATE OF dc`,
+        [id]
+      );
+
+      if (donRes.rowCount === 0) {
+        const err = new Error('Không tìm thấy đơn đặt chỗ');
+        err.status = 404;
+        throw err;
+      }
+
+      const don = donRes.rows[0];
+
+      // 2. Kiem tra quyen: chu don hoac QUAN_TRI
+      const laChuDon = don.khach_id === req.nguoiDung.id;
+      const laQuanTri = req.nguoiDung.vaiTro === 'QUAN_TRI';
+      if (!laChuDon && !laQuanTri) {
+        const err = new Error('Bạn không có quyền hủy đơn đặt chỗ này');
+        err.status = 403;
+        throw err;
+      }
+
+      // Kiem tra trang thai don
+      if (don.trang_thai === 'DA_HUY') {
+        const err = new Error('Đơn đặt chỗ này đã bị hủy trước đó');
+        err.status = 409;
+        throw err;
+      }
+      if (['HOAN_TAT', 'DA_HOAN_TAT', 'DA_CHECKIN'].includes(don.trang_thai)) {
+        const err = new Error(`Không thể hủy đơn đặt chỗ ở trạng thái ${don.trang_thai}`);
+        err.status = 409;
+        throw err;
+      }
+
+      // 3. Tinh so gio con lai tu hien tai den luc khoi hanh
+      const gioBatDau = (don.gio_tap_trung || '07:00').split('-')[0].trim();
+      const gioClean = gioBatDau.length === 5 ? `${gioBatDau}:00` : gioBatDau;
+
+      const timeDiffRes = await client.query(
+        `SELECT EXTRACT(EPOCH FROM (($1::date + $2::time) - CURRENT_TIMESTAMP)) / 3600 AS so_gio_con_lai`,
+        [don.ngay_di, gioClean]
+      );
+      const soGioConLai = parseFloat(timeDiffRes.rows[0].so_gio_con_lai);
+
+      // 4. Tra cuu chinh sach hoan tien tu CSDL
+      let phanTramHoan = 0;
+      if (soGioConLai > 0) {
+        const csRes = await client.query(
+          `SELECT phan_tram_hoan
+           FROM chinh_sach_huy
+           WHERE so_gio_truoc <= $1
+           ORDER BY so_gio_truoc DESC
+           LIMIT 1`,
+          [Math.floor(soGioConLai)]
+        );
+        if (csRes.rowCount > 0) {
+          phanTramHoan = csRes.rows[0].phan_tram_hoan;
+        }
+      }
+
+      // 5. Tinh so tien hoan va cap nhat trang thai
+      const tienHoan = Math.round((Number(don.tong_tien) * phanTramHoan) / 100);
+
+      const updateRes = await client.query(
+        `UPDATE dat_cho
+         SET trang_thai = 'DA_HUY', tien_hoan = $1
+         WHERE id = $2
+         RETURNING *`,
+        [tienHoan, id]
+      );
+
+      return {
+        ...updateRes.rows[0],
+        phan_tram_hoan: phanTramHoan,
+        so_gio_truoc_khoi_hanh: Math.round(soGioConLai * 10) / 10,
+        thong_bao: `Hủy tour thành công. Số giờ trước khởi hành: ${Math.round(soGioConLai * 10) / 10}h. Mức hoàn tiền: ${phanTramHoan}%.`
+      };
+    });
+
+    return res.status(200).json(ketQua);
+  } catch (e) {
+    return res.status(e.status || 500).json({ loi: e.message || 'Lỗi máy chủ khi hủy đặt chỗ' });
+  }
+});
+
 module.exports = router;
