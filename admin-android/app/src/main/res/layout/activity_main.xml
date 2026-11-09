@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FFFFFF"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/tvWelcome"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"
+        android:text="Chào quản trị viên"
+        android:textColor="#0D47A1"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/btnQuanLyDatCho"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:layout_marginBottom="12dp"
+        android:backgroundTint="#1B5E20"
+        android:text="Quản Lý Đặt Chỗ &amp; Hủy Tour"
+        android:textColor="@android:color/white" />
+
+    <Button
+        android:id="@+id/btnQuetQr"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:layout_marginBottom="12dp"
+        android:backgroundTint="#E65100"
+        android:text="Quét QR Vé Điểm Danh"
+        android:textColor="@android:color/white" />
+
+    <Button
+        android:id="@+id/btnBaoCao"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:layout_marginBottom="24dp"
+        android:backgroundTint="#4A148C"
+        android:text="Báo Cáo Biểu Đồ Lấp Đầy &amp; Doanh Thu"
+        android:textColor="@android:color/white"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnLogout"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:backgroundTint="#B71C1C"
+        android:text="Đăng Xuất"
+        android:textColor="@android:color/white" />
+
+</LinearLayout>
