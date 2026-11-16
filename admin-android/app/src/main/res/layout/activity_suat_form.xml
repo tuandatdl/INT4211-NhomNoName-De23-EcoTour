@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootSuatForm"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8FAFC">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <TextView
+            android:id="@+id/tvFormSuatTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#0D47A1"
+            android:padding="16dp"
+            android:text="Thêm Suất Khởi Hành - NhomNoName"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Ngày khởi hành -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Ngày khởi hành (YYYY-MM-DD) *">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtNgayDi"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Giờ tập trung -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Giờ tập trung (HH:mm) *">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtGioTapTrung"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:focusable="false"
+                    android:clickable="true" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Điểm tập trung -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Điểm tập trung / Đón khách *">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtDiemTapTrung"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textCapWords" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Phương tiện -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Phương tiện di chuyển">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtPhuongTien"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Xe du lịch sinh thái &amp; Tàu cao tốc" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Tổng số chỗ -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Tổng số chỗ ngồi *">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edtSoCho"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="number"
+                    android:text="30" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Chọn Hướng dẫn viên -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp"
+                android:text="Hướng dẫn viên phụ trách:"
+                android:textColor="#334155"
+                android:textStyle="bold" />
+
+            <Spinner
+                android:id="@+id/spnHdv"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginBottom="16dp"
+                android:background="@android:drawable/btn_dropdown" />
+
+            <ProgressBar
+                android:id="@+id/progressSaveSuat"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone" />
+
+            <!-- Nút Lưu -->
+            <Button
+                android:id="@+id/btnSaveSuat"
+                android:layout_width="match_parent"
+                android:layout_height="55dp"
+                android:backgroundTint="#0D47A1"
+                android:text="Tạo Suất Khởi Hành"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</ScrollView>
+

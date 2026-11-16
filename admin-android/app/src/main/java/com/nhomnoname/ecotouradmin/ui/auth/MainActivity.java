@@ -9,8 +9,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.nhomnoname.ecotouradmin.R;
 import com.nhomnoname.ecotouradmin.api.TokenStore;
 import com.nhomnoname.ecotouradmin.ui.baocao.BaoCaoChartActivity;
+import com.nhomnoname.ecotouradmin.ui.danhmuc.HdvListActivity;
 import com.nhomnoname.ecotouradmin.ui.datcho.DatChoListActivity;
 import com.nhomnoname.ecotouradmin.ui.datcho.QuetQrDiemDanhActivity;
+import com.nhomnoname.ecotouradmin.ui.tour.TourListActivity;
 
 public class MainActivity extends AppCompatActivity {
     public static final String TAG = "NhomNoName_Log";
@@ -24,9 +26,17 @@ public class MainActivity extends AppCompatActivity {
         TextView tvWelcome = findViewById(R.id.tvWelcome);
         tvWelcome.setText("Xin chào Admin (" + vaiTro + ") - NhomNoName");
 
+        Button btnQuanLyTour = findViewById(R.id.btnQuanLyTour);
+        Button btnQuanLyHdv = findViewById(R.id.btnQuanLyHdv);
         Button btnQuanLyDatCho = findViewById(R.id.btnQuanLyDatCho);
         Button btnQuetQr = findViewById(R.id.btnQuetQr);
         Button btnBaoCao = findViewById(R.id.btnBaoCao);
+
+        btnQuanLyTour.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, TourListActivity.class)));
+
+        btnQuanLyHdv.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, HdvListActivity.class)));
 
         btnQuanLyDatCho.setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, DatChoListActivity.class)));

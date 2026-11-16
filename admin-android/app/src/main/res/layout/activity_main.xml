@@ -17,6 +17,24 @@
         android:textStyle="bold" />
 
     <Button
+        android:id="@+id/btnQuanLyTour"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:layout_marginBottom="12dp"
+        android:backgroundTint="#047857"
+        android:text="Quản Lý Tour &amp; Suất Khởi Hành"
+        android:textColor="@android:color/white" />
+
+    <Button
+        android:id="@+id/btnQuanLyHdv"
+        android:layout_width="match_parent"
+        android:layout_height="55dp"
+        android:layout_marginBottom="12dp"
+        android:backgroundTint="#0F766E"
+        android:text="Danh Mục Hướng Dẫn Viên"
+        android:textColor="@android:color/white" />
+
+    <Button
         android:id="@+id/btnQuanLyDatCho"
         android:layout_width="match_parent"
         android:layout_height="55dp"

@@ -110,9 +110,10 @@ app.post('/auth/dang-ky', async (req, res) => {
  */
 app.post('/auth/dang-nhap', async (req, res) => {
   try {
-    const { email, mat_khau } = req.body;
+    const email = (req.body.email || '').toLowerCase().trim();
+    const matKhau = req.body.matKhau || req.body.mat_khau;
 
-    if (!email || !mat_khau) {
+    if (!email || !matKhau) {
       return res.status(400).json({
         thanhCong: false,
         thongBao: 'Vui lòng cung cấp email và mật khẩu'
@@ -120,7 +121,7 @@ app.post('/auth/dang-nhap', async (req, res) => {
     }
 
     const sql = 'SELECT id, email, mat_khau_hash, ho_ten, sdt, vai_tro FROM nguoi_dung WHERE email = $1';
-    const ketQua = await truyVan(sql, [email.toLowerCase().trim()]);
+    const ketQua = await truyVan(sql, [email]);
 
     if (ketQua.rows.length === 0) {
       return res.status(401).json({
@@ -130,7 +131,7 @@ app.post('/auth/dang-nhap', async (req, res) => {
     }
 
     const nguoiDung = ketQua.rows[0];
-    const matKhauDung = await bcrypt.compare(mat_khau, nguoiDung.mat_khau_hash);
+    const matKhauDung = await bcrypt.compare(matKhau, nguoiDung.mat_khau_hash);
 
     if (!matKhauDung) {
       return res.status(401).json({
@@ -144,19 +145,31 @@ app.post('/auth/dang-nhap', async (req, res) => {
         id: nguoiDung.id,
         email: nguoiDung.email,
         ho_ten: nguoiDung.ho_ten,
-        vai_tro: nguoiDung.vai_tro
+        hoTen: nguoiDung.ho_ten,
+        vai_tro: nguoiDung.vai_tro,
+        vaiTro: nguoiDung.vai_tro
       },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    delete nguoiDung.mat_khau_hash;
+    const userPayload = {
+      id: nguoiDung.id,
+      email: nguoiDung.email,
+      hoTen: nguoiDung.ho_ten,
+      ho_ten: nguoiDung.ho_ten,
+      sdt: nguoiDung.sdt,
+      vaiTro: nguoiDung.vai_tro,
+      vai_tro: nguoiDung.vai_tro
+    };
 
     res.json({
+      token,
+      nguoiDung: userPayload,
       thanhCong: true,
       thongBao: 'Đăng nhập thành công',
       duLieu: {
-        nguoiDung,
+        nguoiDung: userPayload,
         token
       }
     });
@@ -509,6 +522,15 @@ app.post('/dat-cho', async (req, res) => {
     });
   }
 });
+
+// =============================================================================
+// ROUTERS CHO DANH MỤC & QUẢN TRỊ TOUR (TV2 phụ trách)
+// =============================================================================
+const danhMucRoutes = require('./routes/danhMuc.routes');
+const tourRoutes = require('./routes/tour.routes');
+
+app.use('/danh-muc', danhMucRoutes);
+app.use('/quan-ly/tour', tourRoutes);
 
 // =============================================================================
 // 5. BÁO CÁO TỶ LỆ LẤP ĐẦY & DOANH THU (DÀNH CHO QUẢN TRỊ VIÊN)

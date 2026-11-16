@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootTourList"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F8FAFC">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#1B5E20"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvHeaderTour"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Quản Lý Danh Mục Tour - NhomNoName"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btnRefreshTour"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:contentDescription="Làm mới"
+                android:padding="4dp"
+                android:src="@android:drawable/ic_menu_rotate"
+                app:tint="@android:color/white" />
+        </LinearLayout>
+
+        <!-- Trạng thái 1: Đang tải (ProgressBar) -->
+        <ProgressBar
+            android:id="@+id/progressTourList"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="32dp"
+            android:visibility="gone" />
+
+        <!-- Trạng thái 3: Lỗi mạng / Danh sách rỗng -->
+        <LinearLayout
+            android:id="@+id/layoutErrorTour"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="32dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvErrorTourMsg"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="Không tải được dữ liệu từ máy chủ Render"
+                android:textColor="#64748B"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/btnRetryTour"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:backgroundTint="#1B5E20"
+                android:text="Thử Lại"
+                android:textColor="@android:color/white" />
+        </LinearLayout>
+
+        <!-- Trạng thái 2: Danh sách dữ liệu (RecyclerView 1) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvTourList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="80dp" />
+
+    </LinearLayout>
+
+    <!-- Nút thêm tour mới -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabAddTour"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="20dp"
+        android:contentDescription="Thêm tour mới"
+        android:src="@android:drawable/ic_input_add"
+        app:backgroundTint="#1B5E20"
+        app:tint="@android:color/white" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
+
