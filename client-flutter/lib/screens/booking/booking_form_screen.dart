@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../models/booking_model.dart';
 import '../../services/api_service.dart';
 import '../ticket/ticket_qr_screen.dart';
+import 'dang_nhap_tam_dialog.dart';
 
 class BookingFormScreen extends StatefulWidget {
   final SuatModel suat;
@@ -35,6 +36,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   // Danh sách dịch vụ sinh thái đi kèm
   List<DichVuKemModel> _dsDichVu = [];
   bool _dangTaiDichVu = true;
+  String? _loiDichVu;
 
   @override
   void initState() {
@@ -51,42 +53,33 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         _dsDichVu = dv;
         _dangTaiDichVu = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
-      setState(() => _dangTaiDichVu = false);
+      setState(() {
+        _dangTaiDichVu = false;
+        _loiDichVu = 'Không tải được dịch vụ kèm: $e';
+      });
     }
   }
 
+  /// Giữ lại thông tin đã nhập khi tăng/giảm số khách, chỉ thêm/bớt ô ở cuối mỗi nhóm.
+  /// Không gọi setState ở đây - nơi gọi tự bọc trong setState.
   void _dongBoDanhSachHanhKhach() {
+    final nguoiLonCu = _dsHanhKhach.where((k) => k.loaiVe == 'NGUOI_LON').toList();
+    final treEmCu = _dsHanhKhach.where((k) => k.loaiVe == 'TRE_EM').toList();
+
     final List<HanhKhachModel> moi = [];
-
-    // Người lớn
     for (int i = 0; i < _soNguoiLon; i++) {
-      if (i < _dsHanhKhach.length && _dsHanhKhach[i].loaiVe == 'NGUOI_LON') {
-        moi.add(_dsHanhKhach[i]);
-      } else {
-        moi.add(HanhKhachModel(
-          hoTen: i == 0 ? 'Nguyễn Văn Khách' : '',
-          namSinh: 1996,
-          cccd: i == 0 ? '079096001234' : '',
-          loaiVe: 'NGUOI_LON',
-        ));
-      }
+      moi.add(i < nguoiLonCu.length
+          ? nguoiLonCu[i]
+          : HanhKhachModel(hoTen: '', namSinh: 0, cccd: '', loaiVe: 'NGUOI_LON'));
     }
-
-    // Trẻ em
     for (int i = 0; i < _soTreEm; i++) {
-      moi.add(HanhKhachModel(
-        hoTen: '',
-        namSinh: 2018,
-        cccd: '',
-        loaiVe: 'TRE_EM',
-      ));
+      moi.add(i < treEmCu.length
+          ? treEmCu[i]
+          : HanhKhachModel(hoTen: '', namSinh: 0, cccd: '', loaiVe: 'TRE_EM'));
     }
-
-    setState(() {
-      _dsHanhKhach = moi;
-    });
+    _dsHanhKhach = moi;
   }
 
   int get _tongTienVe => (_soNguoiLon * widget.giaNguoiLon) + (_soTreEm * widget.giaTreEm);
@@ -127,8 +120,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     setState(() => _dangGui = true);
 
     try {
-      // Gọi API POST /dat-cho
-      final res = await ApiService.taoDatCho(
+      // POST /dat-cho: máy chủ khóa dòng suất (FOR UPDATE), kiểm tra chỗ và tính tiền
+      final don = await ApiService.taoDatCho(
         suatId: widget.suat.id,
         dsHanhKhach: _dsHanhKhach,
         dsDichVu: _dsDichVu,
@@ -138,67 +131,64 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       if (!mounted) return;
       setState(() => _dangGui = false);
 
-      if (res['thanhCong'] == true) {
-        final don = res['data'];
-        final maVe = don['ma_ve'] ?? '';
-        final datChoId = don['id'] as int? ?? 0;
+      final maVe = don['ma_ve']?.toString() ?? '';
+      final datChoId = soNguyen(don['id']);
+      // Hiển thị tổng tiền DO MÁY CHỦ TÍNH, không dùng số tạm tính của app
+      final tongTienMayChu = soNguyen(don['tong_tien']);
 
-        // Hiện Dialog đặt thành công
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (ctx) => AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 28),
-                SizedBox(width: 8),
-                Text('Đặt Tour Thành Công!'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Mã vé điện tử của bạn: $maVe', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
-                const SizedBox(height: 8),
-                Text('Tổng tiền thanh toán: ${_dinhDangTien.format(don['tong_tien'] ?? _tongTienTamTinh)}'),
-                const SizedBox(height: 6),
-                Text('Số khách: $_soNguoiLon người lớn, $_soTreEm trẻ em'),
-                const SizedBox(height: 12),
-                const Text('Mã QR đã sẵn sàng để quét điểm danh tại bến tàu / xe tập trung.', style: TextStyle(fontSize: 13, color: Colors.black54)),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pop(context, true); // Trả kết quả về màn hình trước theo C.2.2
-                },
-                child: const Text('Đóng'),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => TicketQrScreen(
-                        datChoId: datChoId,
-                        maVe: maVe,
-                        tenTour: widget.tenTour,
-                      ),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
-                icon: const Icon(Icons.qr_code),
-                label: const Text('Xem Vé QR'),
-              ),
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 8),
+              Text('Đặt Tour Thành Công!'),
             ],
           ),
-        );
-      } else if (res['maLoi'] == 409) {
-        // Điểm nhấn kỹ thuật đề 23: Tranh chấp suất và hết chỗ
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Mã vé điện tử: $maVe', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.teal)),
+              const SizedBox(height: 8),
+              Text('Tổng tiền: ${_dinhDangTien.format(tongTienMayChu)}'),
+              const SizedBox(height: 6),
+              Text('Số khách: $_soNguoiLon người lớn, $_soTreEm trẻ em'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pop(context, true); // Trả kết quả về màn hình trước theo C.2.2
+              },
+              child: const Text('Đóng'),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => TicketQrScreen(datChoId: datChoId, maVe: maVe, tenTour: widget.tenTour),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
+              icon: const Icon(Icons.qr_code),
+              label: const Text('Xem Vé QR'),
+            ),
+          ],
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _dangGui = false);
+
+      if (e.maLoi == 409) {
+        // Điểm nhấn kỹ thuật đề 23: người khác vừa đặt mất chỗ cuối, máy chủ từ chối
         await showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -206,15 +196,15 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               children: [
                 Icon(Icons.warning, color: Colors.orange, size: 28),
                 SizedBox(width: 8),
-                Text('Không thể đặt chỗ'),
+                Text('Không đủ chỗ'),
               ],
             ),
-            content: Text(res['loi'] ?? 'Suất khởi hành này vừa có người đặt hết chỗ. Vui lòng chọn suất khác!'),
+            content: Text(e.thongBao),
             actions: [
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  Navigator.pop(context, true); // Pop về để tải lại số chỗ
+                  Navigator.pop(context, true); // Quay về để tải lại số chỗ mới nhất
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.orange, foregroundColor: Colors.white),
                 child: const Text('Chọn suất khác'),
@@ -224,20 +214,24 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['loi'] ?? 'Đặt chỗ thất bại'),
-            backgroundColor: Colors.redAccent,
-          ),
+          SnackBar(content: Text(e.thongBao), backgroundColor: Colors.redAccent),
+        );
+      }
+    } on PhienHetHanException {
+      if (!mounted) return;
+      setState(() => _dangGui = false);
+      final daDangNhap = await hienHopThoaiDangNhapTam(context);
+      if (!mounted) return;
+      if (daDangNhap) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã đăng nhập, bấm Xác nhận đặt chỗ lần nữa')),
         );
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _dangGui = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Lỗi kết nối máy chủ: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
+        SnackBar(content: Text('Lỗi kết nối máy chủ: $e'), backgroundColor: Colors.redAccent),
       );
     }
   }
@@ -395,6 +389,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               final laNguoiLon = hk.loaiVe == 'NGUOI_LON';
 
               return Card(
+                // Gắn key theo đối tượng để ô nhập không bị lệch dữ liệu khi thêm/bớt khách
+                key: ObjectKey(hk),
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
@@ -444,7 +440,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                           Expanded(
                             flex: 2,
                             child: TextFormField(
-                              initialValue: hk.namSinh.toString(),
+                              initialValue: hk.namSinh == 0 ? '' : hk.namSinh.toString(),
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
                                 labelText: 'Năm sinh *',
@@ -487,8 +483,8 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                                 if (laNguoiLon && index == 0 && (val == null || val.trim().isEmpty)) {
                                   return 'Trưởng đoàn cần CCCD';
                                 }
-                                if (val != null && val.isNotEmpty && val.trim().length != 12) {
-                                  return 'CCCD phải đủ 12 số';
+                                if (val != null && val.trim().isNotEmpty && !RegExp(r'^\d{12}$').hasMatch(val.trim())) {
+                                  return 'CCCD phải gồm đúng 12 chữ số';
                                 }
                                 return null;
                               },
@@ -512,6 +508,24 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
 
             if (_dangTaiDichVu)
               const Center(child: CircularProgressIndicator())
+            else if (_loiDichVu != null)
+              Card(
+                color: Colors.orange.shade50,
+                child: ListTile(
+                  leading: const Icon(Icons.cloud_off, color: Colors.orange),
+                  title: Text(_loiDichVu!, style: const TextStyle(fontSize: 13)),
+                  trailing: TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _dangTaiDichVu = true;
+                        _loiDichVu = null;
+                      });
+                      _taiDichVuKem();
+                    },
+                    child: const Text('Thử lại'),
+                  ),
+                ),
+              )
             else
               ..._dsDichVu.map((dv) {
                 return Card(

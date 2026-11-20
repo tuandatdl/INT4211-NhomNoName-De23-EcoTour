@@ -39,14 +39,7 @@ class _SuatPickerScreenState extends State<SuatPickerScreen> {
     });
   }
 
-  String _dinhDangNgay(String ngayStr) {
-    try {
-      final date = DateTime.parse(ngayStr);
-      return DateFormat('dd/MM/yyyy (EEEE)', 'vi_VN').format(date);
-    } catch (_) {
-      return ngayStr;
-    }
-  }
+  String _dinhDangNgay(String ngayStr) => ngayHienThi(ngayStr);
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +168,7 @@ class _SuatPickerScreenState extends State<SuatPickerScreen> {
                   itemCount: dsSuat.length,
                   itemBuilder: (context, i) {
                     final s = dsSuat[i];
-                    final hetCho = s.soChoConLai <= 0;
+                    final hetCho = !s.conNhanKhach;
                     final sapHet = s.soChoConLai > 0 && s.soChoConLai <= 8;
 
                     return Card(
