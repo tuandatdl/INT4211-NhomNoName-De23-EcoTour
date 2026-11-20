@@ -3,46 +3,35 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/booking_model.dart';
 
+/// Lỗi phiên đăng nhập hết hạn (HTTP 401) - màn hình bắt lỗi này để yêu cầu đăng nhập lại.
+class PhienHetHanException implements Exception {
+  final String thongBao;
+  PhienHetHanException([this.thongBao = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại']);
+  @override
+  String toString() => thongBao;
+}
+
+/// Lỗi trả về từ máy chủ kèm mã HTTP và thông báo tiếng Việt.
+class ApiException implements Exception {
+  final int maLoi;
+  final String thongBao;
+  ApiException(this.maLoi, this.thongBao);
+  @override
+  String toString() => thongBao;
+}
+
 class ApiService {
-  // Đường dẫn Backend Render của nhóm (hoặc đổi thành http://10.0.2.2:3000 khi chạy emulator local)
-  static String baseUrl = 'https://ecotour-cangio-vungtau.onrender.com';
+  // Đổi máy chủ khi chạy thử mà không cần sửa code:
+  //   flutter run -d chrome --dart-define=API_URL=http://localhost:3000
+  //   flutter run -d emulator-5554 --dart-define=API_URL=http://10.0.2.2:3000
+  static const String baseUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'https://ecotour-nhomnoname.onrender.com',
+  );
   static const String logTag = 'NhomNoName_Log';
 
-  // Danh sách đơn đặt chỗ lưu tạm cục bộ phục vụ kiểm thử ngoại tuyến mượt mà
-  static final List<DatChoItemModel> _boNhoDonCucBo = [
-    DatChoItemModel(
-      id: 1,
-      suatId: 1,
-      tenTour: 'Tour 1: Khám phá Rừng Sác Cần Giờ - Đảo Khỉ 1 Ngày',
-      ngayDi: '2026-11-20',
-      gioTapTrung: '06:30',
-      diemTapTrung: 'Nhà Văn hóa Thanh Niên - Số 4 Phạm Ngọc Thạch, Q1, TP.HCM',
-      phuongTien: 'Xe du lịch 29 chỗ & Tàu cao tốc',
-      soNguoiLon: 2,
-      soTreEm: 1,
-      tongTien: 1750000,
-      tienHoan: 0,
-      maVe: 'VE-CGVT-0001',
-      trangThai: 'DA_XAC_NHAN',
-      datLuc: '2026-11-10 14:30:00',
-    ),
-    DatChoItemModel(
-      id: 2,
-      suatId: 3,
-      tenTour: 'Tour 3: Liên tuyến Tàu cao tốc Cần Giờ - Vũng Tàu 2N1Đ',
-      ngayDi: '2026-11-28',
-      gioTapTrung: '07:00',
-      diemTapTrung: 'Bến Bạch Đằng - Số 10A Tôn Đức Thắng, Q1, TP.HCM',
-      phuongTien: 'Tàu cao tốc Greenlines DP',
-      soNguoiLon: 1,
-      soTreEm: 0,
-      tongTien: 1650000,
-      tienHoan: 0,
-      maVe: 'VE-CGVT-0002',
-      trangThai: 'DA_XAC_NHAN',
-      datLuc: '2026-11-08 09:15:00',
-    ),
-  ];
+  // Render gói Free ngủ sau 15 phút, lần gọi đầu mất khoảng 1 phút để thức dậy
+  static const Duration _timeout = Duration(seconds: 90);
 
   static Future<Map<String, String>> _headers() async {
     final prefs = await SharedPreferences.getInstance();
@@ -53,314 +42,128 @@ class ApiService {
     };
   }
 
-  // Đăng nhập và lưu token vào SharedPreferences
-  static Future<bool> dangNhap({String email = 'khach1@gmail.com', String matKhau = '123456'}) async {
+  /// Giải mã body bằng utf8 để không lỗi font tiếng Việt.
+  static dynamic _giaiMa(http.Response res) {
+    if (res.bodyBytes.isEmpty) return null;
     try {
-      final uri = Uri.parse('$baseUrl/auth/dang-nhap');
-      final res = await http
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'email': email, 'matKhau': matKhau}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes));
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', data['token'] ?? '');
-        if (data['nguoiDung'] != null) {
-          await prefs.setString('hoTen', data['nguoiDung']['hoTen'] ?? '');
-          await prefs.setString('email', data['nguoiDung']['email'] ?? '');
-          await prefs.setString('vaiTro', data['nguoiDung']['vaiTro'] ?? '');
-        }
-        return true;
-      }
-    } catch (_) {}
-    return false;
-  }
-
-  static Future<String> layTokenHoacDangNhapTest() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? token = prefs.getString('token');
-    if (token == null || token.isEmpty) {
-      await dangNhap();
-      token = prefs.getString('token') ?? 'DEMO_TOKEN_NHOMNONAME';
+      return jsonDecode(utf8.decode(res.bodyBytes));
+    } catch (_) {
+      return null;
     }
-    return token;
   }
 
-  // Lấy danh sách Suất khởi hành kèm số chỗ còn lại (GET /tour/:id/suat)
+  /// Backend của nhóm có 2 kiểu trả lỗi: {loi: ...} (TV1) và {thongBao: ...} (TV2).
+  static String _layThongBaoLoi(dynamic data, int maLoi) {
+    if (data is Map) {
+      final tb = data['loi'] ?? data['thongBao'];
+      if (tb != null) return tb.toString();
+    }
+    return 'Lỗi máy chủ ($maLoi)';
+  }
+
+  /// Backend có route trả mảng thẳng, có route bọc trong {duLieu: [...]}.
+  static List _layDanhSach(dynamic data) {
+    if (data is List) return data;
+    if (data is Map && data['duLieu'] is List) return data['duLieu'] as List;
+    return [];
+  }
+
+  /// Kiểm tra mã trạng thái, ném lỗi rõ ràng để màn hình hiển thị trạng thái lỗi.
+  static dynamic _xuLyPhanHoi(http.Response res) {
+    final data = _giaiMa(res);
+    if (res.statusCode >= 200 && res.statusCode < 300) return data;
+    if (res.statusCode == 401) {
+      throw PhienHetHanException(_layThongBaoLoi(data, 401));
+    }
+    throw ApiException(res.statusCode, _layThongBaoLoi(data, res.statusCode));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Đăng nhập tạm để TV4 tự kiểm thử khi màn hình Đăng nhập của TV3 chưa có.
+  // Khi TV3 hoàn thành màn hình Đăng nhập, token sẽ được lưu cùng khóa 'token'.
+  // ---------------------------------------------------------------------------
+  static Future<void> dangNhap(String email, String matKhau) async {
+    final res = await http
+        .post(
+          Uri.parse('$baseUrl/auth/dang-nhap'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'email': email, 'matKhau': matKhau}),
+        )
+        .timeout(_timeout);
+
+    final data = _xuLyPhanHoi(res);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('token', data['token']?.toString() ?? '');
+  }
+
+  static Future<bool> daDangNhap() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getString('token') ?? '').isNotEmpty;
+  }
+
+  // GET /tour/:id/suat - Danh sách suất kèm số chỗ còn lại (máy chủ tính)
   static Future<List<SuatModel>> layDanhSachSuat(int tourId) async {
-    try {
-      final uri = Uri.parse('$baseUrl/tour/$tourId/suat');
-      final res = await http
-          .get(uri, headers: await _headers())
-          .timeout(const Duration(seconds: 8));
-
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(utf8.decode(res.bodyBytes));
-        return data.map((e) => SuatModel.fromJson(e)).toList();
-      }
-    } catch (_) {}
-
-    // Dữ liệu chuẩn theo seed.sql của Đề 23 (phục vụ test mượt mà khi backend chưa wake up)
-    return [
-      SuatModel(
-        id: 1,
-        tourId: tourId,
-        ngayDi: '2026-11-20',
-        gioTapTrung: '06:30',
-        diemTapTrung: 'Nhà Văn hóa Thanh Niên - Số 4 Phạm Ngọc Thạch, Quận 1, TP.HCM',
-        phuongTien: 'Xe Limousine sinh thái 16 chỗ',
-        soCho: 30,
-        soChoConLai: 18,
-        tenHdv: 'Nguyễn Minh Khôi (Thẻ Quốc tế)',
-        trangThai: 'NHAN_KHACH',
-      ),
-      SuatModel(
-        id: 2,
-        tourId: tourId,
-        ngayDi: '2026-11-22',
-        gioTapTrung: '07:00',
-        diemTapTrung: 'Bến phà Bình Khánh - Đường Huỳnh Tấn Phát, Nhà Bè, TP.HCM',
-        phuongTien: 'Xe du lịch 29 chỗ & Tàu cao tốc',
-        soCho: 30,
-        soChoConLai: 5, // Sắp hết chỗ để test badge màu cam
-        tenHdv: 'Trần Bảo Ngọc (Thẻ Quốc tế)',
-        trangThai: 'NHAN_KHACH',
-      ),
-      SuatModel(
-        id: 3,
-        tourId: tourId,
-        ngayDi: '2026-11-25',
-        gioTapTrung: '06:30',
-        diemTapTrung: 'Nhà Văn hóa Thanh Niên - Số 4 Phạm Ngọc Thạch, Quận 1, TP.HCM',
-        phuongTien: 'Xe Limousine sinh thái 16 chỗ',
-        soCho: 30,
-        soChoConLai: 26,
-        tenHdv: 'Lê Quốc Tuấn (Thẻ Nội địa)',
-        trangThai: 'NHAN_KHACH',
-      ),
-      SuatModel(
-        id: 4,
-        tourId: tourId,
-        ngayDi: '2026-11-15',
-        gioTapTrung: '06:30',
-        diemTapTrung: 'Bến Bạch Đằng - Quận 1, TP.HCM',
-        phuongTien: 'Tàu cao tốc Greenlines DP',
-        soCho: 30,
-        soChoConLai: 0, // Đã hết chỗ để test badge màu đỏ và vô hiệu hóa click
-        tenHdv: 'Phạm Thanh Thảo (Thẻ Quốc tế)',
-        trangThai: 'DA_KHOA',
-      ),
-    ];
+    final res = await http
+        .get(Uri.parse('$baseUrl/tour/$tourId/suat'), headers: await _headers())
+        .timeout(_timeout);
+    final data = _xuLyPhanHoi(res);
+    return _layDanhSach(data).map((e) => SuatModel.fromJson(e)).toList();
   }
 
-  // Lấy danh sách Dịch vụ kèm theo (GET /dich-vu-kem)
+  // GET /danh-muc/dich-vu-kem - Danh sách dịch vụ kèm theo (API của TV2)
   static Future<List<DichVuKemModel>> layDanhSachDichVuKem() async {
-    try {
-      final uri = Uri.parse('$baseUrl/dich-vu-kem');
-      final res = await http
-          .get(uri, headers: await _headers())
-          .timeout(const Duration(seconds: 8));
-
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(utf8.decode(res.bodyBytes));
-        return data.map((e) => DichVuKemModel.fromJson(e)).toList();
-      }
-    } catch (_) {}
-
-    // Dữ liệu chuẩn theo seed.sql của Đề 23
-    return [
-      DichVuKemModel(id: 1, ten: 'Suất ăn trưa hải sản sinh thái Cần Giờ', gia: 180000, donVi: 'suất'),
-      DichVuKemModel(id: 2, ten: 'Thuê xe đạp xuyên rừng ngập mặn', gia: 80000, donVi: 'chiếc/ngày'),
-      DichVuKemModel(id: 3, ten: 'Vé cano tham quan Đầm Dơi & Tràm Chim', gia: 150000, donVi: 'vé'),
-      DichVuKemModel(id: 4, ten: 'Vé cáp treo Hồ Mây Park Vũng Tàu', gia: 400000, donVi: 'vé'),
-      DichVuKemModel(id: 5, ten: 'Combo chèo thuyền Kayak rừng Sác', gia: 120000, donVi: 'lượt'),
-      DichVuKemModel(id: 6, ten: 'Lều cắm trại sinh thái qua đêm bãi biển', gia: 250000, donVi: 'lều'),
-    ];
+    final res = await http
+        .get(Uri.parse('$baseUrl/danh-muc/dich-vu-kem'), headers: await _headers())
+        .timeout(_timeout);
+    final data = _xuLyPhanHoi(res);
+    return _layDanhSach(data).map((e) => DichVuKemModel.fromJson(e)).toList();
   }
 
-  // POST /dat-cho - Nghiệp vụ then chốt có transaction FOR UPDATE chống vượt chỗ
+  // POST /dat-cho - Máy chủ kiểm tra và trừ chỗ trong 1 transaction có FOR UPDATE.
+  // Giá tiền do máy chủ tính, app chỉ gửi danh sách hành khách và dịch vụ.
+  // Trả về đơn vừa tạo; ném ApiException(409) khi suất không còn đủ chỗ.
   static Future<Map<String, dynamic>> taoDatCho({
     required int suatId,
     required List<HanhKhachModel> dsHanhKhach,
     required List<DichVuKemModel> dsDichVu,
   }) async {
-    await layTokenHoacDangNhapTest();
     final body = {
       'suatId': suatId,
       'dsHanhKhach': dsHanhKhach.map((hk) => hk.toJson()).toList(),
-      'dsDichVu': dsDichVu
-          .where((dv) => dv.soLuong > 0)
-          .map((dv) => dv.toDatDichVuJson())
-          .toList(),
+      'dsDichVu': dsDichVu.where((dv) => dv.soLuong > 0).map((dv) => dv.toDatDichVuJson()).toList(),
     };
 
-    try {
-      final uri = Uri.parse('$baseUrl/dat-cho');
-      final res = await http
-          .post(uri, headers: await _headers(), body: jsonEncode(body))
-          .timeout(const Duration(seconds: 12));
-
-      final Map<String, dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
-
-      if (res.statusCode == 201) {
-        return {'thanhCong': true, 'data': data};
-      } else if (res.statusCode == 409) {
-        return {
-          'thanhCong': false,
-          'maLoi': 409,
-          'loi': data['loi'] ?? 'Số chỗ trống không đủ cho đoàn. Vui lòng chọn suất khác!',
-        };
-      }
-    } catch (_) {}
-
-    // Mock tạo vé thành công phục vụ test trực quan khi Render chưa chạy
-    final soNL = dsHanhKhach.where((k) => k.loaiVe == 'NGUOI_LON').length;
-    final soTE = dsHanhKhach.where((k) => k.loaiVe == 'TRE_EM').length;
-    int tongTien = (soNL * 650000) + (soTE * 450000);
-    for (final dv in dsDichVu) {
-      tongTien += dv.gia * dv.soLuong;
-    }
-
-    final maVeMoi = 'VE-CGVT-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-    final donMoi = DatChoItemModel(
-      id: _boNhoDonCucBo.length + 1,
-      suatId: suatId,
-      tenTour: 'Tour 1: Khám phá Rừng Sác Cần Giờ - Đảo Khỉ 1 Ngày',
-      ngayDi: '2026-11-20',
-      gioTapTrung: '06:30',
-      diemTapTrung: 'Nhà Văn hóa Thanh Niên - Số 4 Phạm Ngọc Thạch, Q1, TP.HCM',
-      phuongTien: 'Xe Limousine sinh thái 16 chỗ',
-      soNguoiLon: soNL,
-      soTreEm: soTE,
-      tongTien: tongTien,
-      tienHoan: 0,
-      maVe: maVeMoi,
-      trangThai: 'DA_XAC_NHAN',
-      datLuc: 'Vừa xong',
-    );
-    _boNhoDonCucBo.insert(0, donMoi);
-
-    return {
-      'thanhCong': true,
-      'data': {
-        'id': donMoi.id,
-        'ma_ve': maVeMoi,
-        'tong_tien': tongTien,
-        'so_nguoi_lon': soNL,
-        'so_tre_em': soTE,
-      },
-    };
+    final res = await http
+        .post(Uri.parse('$baseUrl/dat-cho'), headers: await _headers(), body: jsonEncode(body))
+        .timeout(_timeout);
+    final data = _xuLyPhanHoi(res);
+    return Map<String, dynamic>.from(data as Map);
   }
 
-  // GET /dat-cho/cua-toi - Danh sách đơn của tôi (ListView.builder thứ 2)
+  // GET /dat-cho/cua-toi - Danh sách đơn của khách đang đăng nhập
   static Future<List<DatChoItemModel>> layDonDatChoCuaToi() async {
-    try {
-      final uri = Uri.parse('$baseUrl/dat-cho/cua-toi');
-      final res = await http
-          .get(uri, headers: await _headers())
-          .timeout(const Duration(seconds: 8));
-
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(utf8.decode(res.bodyBytes));
-        return data.map((e) => DatChoItemModel.fromJson(e)).toList();
-      }
-    } catch (_) {}
-
-    return List.from(_boNhoDonCucBo);
+    final res = await http
+        .get(Uri.parse('$baseUrl/dat-cho/cua-toi'), headers: await _headers())
+        .timeout(_timeout);
+    final data = _xuLyPhanHoi(res);
+    return _layDanhSach(data).map((e) => DatChoItemModel.fromJson(e)).toList();
   }
 
-  // GET /dat-cho/:id/ve - Lấy chi tiết vé điện tử kèm mã QR
+  // GET /dat-cho/:id/ve - Chi tiết vé, hành khách, dịch vụ kèm, trạng thái điểm danh
   static Future<VeChiTietModel> layChiTietVe(int datChoId) async {
-    try {
-      final uri = Uri.parse('$baseUrl/dat-cho/$datChoId/ve');
-      final res = await http
-          .get(uri, headers: await _headers())
-          .timeout(const Duration(seconds: 8));
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(res.bodyBytes));
-        return VeChiTietModel.fromJson(data);
-      }
-    } catch (_) {}
-
-    final don = _boNhoDonCucBo.firstWhere(
-      (d) => d.id == datChoId,
-      orElse: () => _boNhoDonCucBo.first,
-    );
-
-    return VeChiTietModel(
-      id: don.id,
-      maVe: don.maVe,
-      tenTour: don.tenTour,
-      soNgay: 1,
-      ngayDi: don.ngayDi,
-      gioTapTrung: don.gioTapTrung,
-      diemTapTrung: don.diemTapTrung,
-      phuongTien: don.phuongTien ?? 'Xe du lịch sinh thái',
-      hoTenHdv: 'Nguyễn Minh Khôi',
-      sdtHdv: '0918111001',
-      hoTenKhach: 'Bùi Quang Duy (Khách đặt)',
-      sdtKhach: '0903000001',
-      soNguoiLon: don.soNguoiLon,
-      soTreEm: don.soTreEm,
-      tongTien: don.tongTien,
-      tienHoan: don.tienHoan,
-      trangThai: don.trangThai,
-      dsHanhKhach: [
-        {'ho_ten': 'Bùi Quang Duy (Trưởng đoàn)', 'nam_sinh': 1996, 'loai_ve': 'NGUOI_LON'},
-        if (don.soTreEm > 0) {'ho_ten': 'Em bé đi cùng', 'nam_sinh': 2018, 'loai_ve': 'TRE_EM'},
-      ],
-      dsDichVu: [
-        {'ten': 'Suất ăn trưa hải sản sinh thái Cần Giờ', 'so_luong': 2},
-      ],
-    );
+    final res = await http
+        .get(Uri.parse('$baseUrl/dat-cho/$datChoId/ve'), headers: await _headers())
+        .timeout(_timeout);
+    final data = _xuLyPhanHoi(res);
+    return VeChiTietModel.fromJson(Map<String, dynamic>.from(data as Map));
   }
 
-  // PATCH /dat-cho/:id/huy - Hủy đơn đặt chỗ & tính tiền hoàn tự động
+  // PATCH /dat-cho/:id/huy - Máy chủ tự tính tiền hoàn theo bảng chinh_sach_huy
   static Future<Map<String, dynamic>> huyDatCho(int datChoId) async {
-    try {
-      final uri = Uri.parse('$baseUrl/dat-cho/$datChoId/huy');
-      final res = await http
-          .patch(uri, headers: await _headers())
-          .timeout(const Duration(seconds: 8));
-
-      final Map<String, dynamic> data = jsonDecode(utf8.decode(res.bodyBytes));
-      if (res.statusCode == 200) {
-        return {'thanhCong': true, 'data': data};
-      }
-    } catch (_) {}
-
-    // Mock hủy đơn theo chính sách hoàn tiền 100% nếu hủy sớm
-    final idx = _boNhoDonCucBo.indexWhere((d) => d.id == datChoId);
-    int tienHoan = 0;
-    if (idx != -1) {
-      final cu = _boNhoDonCucBo[idx];
-      tienHoan = (cu.tongTien * 1.0).toInt(); // Hoàn 100%
-      _boNhoDonCucBo[idx] = DatChoItemModel(
-        id: cu.id,
-        suatId: cu.suatId,
-        tenTour: cu.tenTour,
-        ngayDi: cu.ngayDi,
-        gioTapTrung: cu.gioTapTrung,
-        diemTapTrung: cu.diemTapTrung,
-        phuongTien: cu.phuongTien,
-        soNguoiLon: cu.soNguoiLon,
-        soTreEm: cu.soTreEm,
-        tongTien: cu.tongTien,
-        tienHoan: tienHoan,
-        maVe: cu.maVe,
-        trangThai: 'DA_HUY',
-        datLuc: cu.datLuc,
-      );
-    }
-
-    return {
-      'thanhCong': true,
-      'data': {'tien_hoan': tienHoan, 'trang_thai': 'DA_HUY'},
-    };
+    final res = await http
+        .patch(Uri.parse('$baseUrl/dat-cho/$datChoId/huy'), headers: await _headers())
+        .timeout(_timeout);
+    final data = _xuLyPhanHoi(res);
+    return Map<String, dynamic>.from(data as Map);
   }
 }
