@@ -141,14 +141,29 @@ class _SuatPickerScreenState extends State<SuatPickerScreen> {
                             style: const TextStyle(color: Colors.black54, fontSize: 13),
                           ),
                           const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _taiDanhSachSuat,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Thử lại'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.teal,
-                              foregroundColor: Colors.white,
-                            ),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
+                            children: [
+                              ElevatedButton.icon(
+                                onPressed: _taiDanhSachSuat,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Thử lại'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.teal,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  ApiService.cheDoKiemThuCucBo = true;
+                                  _taiDanhSachSuat();
+                                },
+                                icon: const Icon(Icons.science_outlined),
+                                label: const Text('Bật dữ liệu mẫu Đề 23'),
+                              ),
+                            ],
                           ),
                         ],
                       ),

@@ -106,17 +106,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
       return;
     }
 
-    final tongKhach = _soNguoiLon + _soTreEm;
-    if (tongKhach > widget.suat.soChoConLai) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Số khách ($tongKhach) vượt quá số chỗ còn lại (${widget.suat.soChoConLai})!'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
+    // Để máy chủ kiểm tra số chỗ trong transaction FOR UPDATE và trả về 409 nếu vượt chỗ
     setState(() => _dangGui = true);
 
     try {
@@ -317,7 +307,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                             Text('$_soNguoiLon', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline, color: Colors.teal),
-                              onPressed: tongKhach < widget.suat.soChoConLai
+                              onPressed: tongKhach < widget.suat.soCho
                                   ? () {
                                       setState(() {
                                         _soNguoiLon++;
@@ -357,7 +347,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                             Text('$_soTreEm', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             IconButton(
                               icon: const Icon(Icons.add_circle_outline, color: Colors.teal),
-                              onPressed: tongKhach < widget.suat.soChoConLai
+                              onPressed: tongKhach < widget.suat.soCho
                                   ? () {
                                       setState(() {
                                         _soTreEm++;

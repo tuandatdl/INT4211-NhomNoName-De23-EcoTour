@@ -249,10 +249,12 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                             style: const TextStyle(fontSize: 13, color: Colors.black54),
                           ),
                           const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 8,
+                            alignment: WrapAlignment.center,
                             children: [
-                              if (laHetHan) ...[
+                              if (laHetHan)
                                 ElevatedButton.icon(
                                   onPressed: () async {
                                     final ok = await hienHopThoaiDangNhapTam(context);
@@ -263,12 +265,18 @@ class _MyBookingsScreenState extends State<MyBookingsScreen> {
                                   label: const Text('Đăng nhập ngay'),
                                   style: ElevatedButton.styleFrom(backgroundColor: Colors.teal, foregroundColor: Colors.white),
                                 ),
-                                const SizedBox(width: 12),
-                              ],
                               OutlinedButton.icon(
                                 onPressed: _taiDanhSachDon,
                                 icon: const Icon(Icons.refresh),
                                 label: const Text('Thử lại'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: () {
+                                  ApiService.cheDoKiemThuCucBo = true;
+                                  _taiDanhSachDon();
+                                },
+                                icon: const Icon(Icons.science_outlined),
+                                label: const Text('Bật dữ liệu mẫu Đề 23'),
                               ),
                             ],
                           ),
