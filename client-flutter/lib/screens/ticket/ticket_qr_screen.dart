@@ -44,6 +44,13 @@ class _TicketQrScreenState extends State<TicketQrScreen> {
         title: const Text('Vé Điện Tử EcoTour - NhomNoName'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Tải lại thông tin vé',
+            onPressed: _taiLai,
+          ),
+        ],
       ),
       body: FutureBuilder<VeChiTietModel>(
         future: _tuongLaiVe,
@@ -52,15 +59,11 @@ class _TicketQrScreenState extends State<TicketQrScreen> {
             return const Center(child: CircularProgressIndicator(color: Colors.teal));
           }
 
-          if (snapshot.hasError) {
-            // Trường hợp lỗi mạng, vẫn hiển thị mã QR tĩnh từ widget.maVe dự phòng
+          if (snapshot.hasError || snapshot.data == null) {
             return _xayDungGiaoDienVeDuPhong();
           }
 
-          final ve = snapshot.data;
-          if (ve == null) {
-            return _xayDungGiaoDienVeDuPhong();
-          }
+          final ve = snapshot.data!;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -72,7 +75,6 @@ class _TicketQrScreenState extends State<TicketQrScreen> {
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      // Tên tour và mã vé
                       Text(
                         ve.tenTour,
                         textAlign: TextAlign.center,
@@ -91,8 +93,20 @@ class _TicketQrScreenState extends State<TicketQrScreen> {
                           style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2, color: Colors.teal),
                         ),
                       ),
+                      const SizedBox(height: 6),
+                      Chip(
+                        avatar: Icon(
+                          ve.daDiemDanhDu ? Icons.verified : Icons.schedule,
+                          size: 16,
+                          color: ve.daDiemDanhDu ? Colors.green : Colors.orange,
+                        ),
+                        label: Text(
+                          ve.daDiemDanhDu ? 'Đoàn đã điểm danh đủ' : 'Chưa điểm danh tại điểm đón',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Mã QR Code dùng để HDV quét điểm danh lên xe/tàu
                       Container(
@@ -114,14 +128,15 @@ class _TicketQrScreenState extends State<TicketQrScreen> {
 
                       const SizedBox(height: 12),
                       const Text(
-                        'Quét mã này tại điểm đón để điểm danh lên xe/tàu',
+                        'Đưa mã QR này cho Hướng dẫn viên quét điểm danh tại bến tàu/xe',
+                        textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 13, color: Colors.black54, fontStyle: FontStyle.italic),
                       ),
 
                       const Divider(height: 32),
 
                       // Thông tin chi tiết chuyến đi
-                      _dongThongTin(Icons.calendar_month, 'Ngày khởi hành', ve.ngayDi),
+                      _dongThongTin(Icons.calendar_month, 'Ngày khởi hành', ngayHienThi(ve.ngayDi)),
                       _dongThongTin(Icons.access_time, 'Giờ tập trung', ve.gioTapTrung),
                       _dongThongTin(Icons.location_on, 'Điểm đón', ve.diemTapTrung),
                       _dongThongTin(Icons.directions_bus, 'Phương tiện', ve.phuongTien),
@@ -133,10 +148,12 @@ class _TicketQrScreenState extends State<TicketQrScreen> {
                         '${ve.soNguoiLon} người lớn, ${ve.soTreEm} trẻ em',
                       ),
                       _dongThongTin(Icons.payment, 'Tổng tiền đã thanh toán', _dinhDangTien.format(ve.tongTien)),
+                      if (ve.tienHoan > 0)
+                        _dongThongTin(Icons.replay, 'Số tiền đã hoàn', _dinhDangTien.format(ve.tienHoan)),
 
                       const Divider(height: 24),
 
-                      // Danh sách tên hành khách trong vé
+                      // Danh sách hành khách kèm trạng thái điểm danh
                       if (ve.dsHanhKhach.isNotEmpty) ...[
                         const Align(
                           alignment: Alignment.centerLeft,
@@ -148,16 +165,58 @@ class _TicketQrScreenState extends State<TicketQrScreen> {
                         const SizedBox(height: 8),
                         ...ve.dsHanhKhach.map((hk) {
                           return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            padding: const EdgeInsets.symmetric(vertical: 3),
                             child: Row(
                               children: [
-                                const Icon(Icons.check_circle_outline, size: 16, color: Colors.teal),
+                                Icon(
+                                  hk.daDiemDanh ? Icons.check_circle : Icons.radio_button_unchecked,
+                                  size: 16,
+                                  color: hk.daDiemDanh ? Colors.green : Colors.teal,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    '${hk['ho_ten']} (${hk['nam_sinh']}) - ${hk['loai_ve'] == 'NGUOI_LON' ? 'Người lớn' : 'Trẻ em'}',
+                                    '${hk.hoTen} (${hk.namSinh}) - ${hk.loaiVe == 'NGUOI_LON' ? 'Người lớn' : 'Trẻ em'}',
                                     style: const TextStyle(fontSize: 13),
                                   ),
+                                ),
+                                Text(
+                                  hk.daDiemDanh ? 'Đã lên xe' : 'Chờ quét',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: hk.daDiemDanh ? Colors.green : Colors.orange,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+
+                      // Dịch vụ sinh thái đi kèm
+                      if (ve.dsDichVu.isNotEmpty) ...[
+                        const Divider(height: 24),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'DỊCH VỤ SINH THÁI KÈM THEO:',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black87),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ...ve.dsDichVu.map((dv) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text('• ${dv.ten} (x${dv.soLuong})', style: const TextStyle(fontSize: 13)),
+                                ),
+                                Text(
+                                  _dinhDangTien.format(dv.gia * dv.soLuong),
+                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                                 ),
                               ],
                             ),
