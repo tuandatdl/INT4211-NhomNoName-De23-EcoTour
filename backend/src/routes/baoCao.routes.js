@@ -4,7 +4,7 @@ const { xacThuc, choPhep } = require('../middleware/auth');
 
 const router = express.Router();
 
-// GET /bao-cao/lap-day - Thong ke ty le lap day va doanh thu theo tung tour va suat khoi hanh
+// GET /bao-cao/lap-day - Thong ke ty le lap day va doanh thu theo tung tour
 router.get('/lap-day', xacThuc, choPhep('QUAN_TRI'), async (req, res) => {
   const { tour, tu, den } = req.query;
 
@@ -12,19 +12,17 @@ router.get('/lap-day', xacThuc, choPhep('QUAN_TRI'), async (req, res) => {
     SELECT
       t.id AS tour_id,
       t.ten AS ten_tour,
-      s.id AS suat_id,
-      s.ngay_di,
-      s.gio_tap_trung,
-      s.so_cho AS tong_so_cho,
+      COUNT(DISTINCT s.id)::int AS tong_suat,
+      COALESCE(SUM(s.so_cho), 0)::int AS tong_so_cho,
       COALESCE(SUM(CASE WHEN dc.trang_thai != 'DA_HUY' THEN (dc.so_nguoi_lon + dc.so_tre_em) ELSE 0 END), 0)::int AS so_khach_da_dat,
       ROUND(
         (COALESCE(SUM(CASE WHEN dc.trang_thai != 'DA_HUY' THEN (dc.so_nguoi_lon + dc.so_tre_em) ELSE 0 END), 0)::numeric /
-        NULLIF(s.so_cho, 0)::numeric) * 100, 2
+        NULLIF(SUM(s.so_cho), 0)::numeric) * 100, 2
       ) AS ty_le_lap_day_phan_tram,
       COALESCE(SUM(CASE WHEN dc.trang_thai != 'DA_HUY' THEN dc.tong_tien ELSE 0 END), 0)::numeric AS doanh_thu,
       COALESCE(SUM(CASE WHEN dc.trang_thai = 'DA_HUY' THEN dc.tien_hoan ELSE 0 END), 0)::numeric AS tong_tien_hoan
-    FROM suat_khoi_hanh s
-    JOIN tour t ON t.id = s.tour_id
+    FROM tour t
+    LEFT JOIN suat_khoi_hanh s ON t.id = s.tour_id
     LEFT JOIN dat_cho dc ON dc.suat_id = s.id
     WHERE 1=1
   `;
@@ -44,8 +42,8 @@ router.get('/lap-day', xacThuc, choPhep('QUAN_TRI'), async (req, res) => {
   }
 
   sql += `
-    GROUP BY t.id, t.ten, s.id, s.ngay_di, s.gio_tap_trung, s.so_cho
-    ORDER BY s.ngay_di ASC, t.id ASC
+    GROUP BY t.id, t.ten
+    ORDER BY doanh_thu DESC, t.id ASC
   `;
 
   try {
@@ -54,14 +52,15 @@ router.get('/lap-day', xacThuc, choPhep('QUAN_TRI'), async (req, res) => {
     // Tinh tong quan toan bo ket qua loc
     const tongQuan = r.rows.reduce(
       (acc, row) => {
-        acc.tongSoSuat += 1;
-        acc.tongSoCho += row.tong_so_cho;
-        acc.tongKhachDaDat += row.so_khach_da_dat;
-        acc.tongDoanhThu += Number(row.doanh_thu);
-        acc.tongTienHoan += Number(row.tong_tien_hoan);
+        acc.tongSoTour += 1;
+        acc.tongSoSuat += Number(row.tong_suat || 0);
+        acc.tongSoCho += Number(row.tong_so_cho || 0);
+        acc.tongKhachDaDat += Number(row.so_khach_da_dat || 0);
+        acc.tongDoanhThu += Number(row.doanh_thu || 0);
+        acc.tongTienHoan += Number(row.tong_tien_hoan || 0);
         return acc;
       },
-      { tongSoSuat: 0, tongSoCho: 0, tongKhachDaDat: 0, tongDoanhThu: 0, tongTienHoan: 0 }
+      { tongSoTour: 0, tongSoSuat: 0, tongSoCho: 0, tongKhachDaDat: 0, tongDoanhThu: 0, tongTienHoan: 0 }
     );
 
     const tyLeLapDayTrungBinh = tongQuan.tongSoCho > 0
