@@ -1,5 +1,10 @@
 # Đề 23: Hệ thống đặt tour du lịch sinh thái Cần Giờ – Vũng Tàu (INT4211)
 
+## 🌐 Hạ tầng Backend Cloud (Mốc Tuần 11 - Đã Triển khai Trực tiếp)
+- **Link API Production (Render)**: https://ecotour-nhomnoname-api.onrender.com
+- **Kiểm tra trạng thái máy chủ (Health Check)**: https://ecotour-nhomnoname-api.onrender.com/health
+- **Cơ sở dữ liệu đám mây**: PostgreSQL 16 (Hosted on Supabase Cloud)
+
 ## 1. Danh sách thành viên & Phân công nhiệm vụ (Nhóm NoName)
 | Mã nhóm | MSSV | Họ và tên | Phần được phân công |
 | :--- | :--- | :--- | :--- |

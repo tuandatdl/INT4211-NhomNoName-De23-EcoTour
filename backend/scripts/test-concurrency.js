@@ -7,7 +7,7 @@
  *   2. Chạy kịch bản kiểm thử: npm run test:race (hoặc: node scripts/test-concurrency.js)
  */
 
-const API_URL = process.env.API_URL || 'http://localhost:3000';
+const API_URL = process.env.API_URL || process.env.BASE_URL || 'http://localhost:3000';
 
 async function kiemThuDongThoi() {
   console.log('=============================================================================');
