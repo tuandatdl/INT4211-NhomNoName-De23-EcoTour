@@ -60,7 +60,7 @@ router.post('/dang-nhap', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: u.id, vaiTro: u.vai_tro },
+      { id: u.id, vaiTro: u.vai_tro, vai_tro: u.vai_tro },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );

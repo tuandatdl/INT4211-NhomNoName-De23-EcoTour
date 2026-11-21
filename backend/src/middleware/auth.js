@@ -18,7 +18,8 @@ function xacThuc(req, res, next) {
 
 function choPhep(...vaiTroChoPhep) {
   return (req, res, next) => {
-    if (!req.nguoiDung || !vaiTroChoPhep.includes(req.nguoiDung.vaiTro)) {
+    const vaiTro = req.nguoiDung && (req.nguoiDung.vaiTro || req.nguoiDung.vai_tro);
+    if (!req.nguoiDung || !vaiTroChoPhep.includes(vaiTro)) {
       return res.status(403).json({ loi: 'Không có quyền thực hiện chức năng này' });
     }
     next();
