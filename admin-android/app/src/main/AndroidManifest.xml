@@ -10,6 +10,7 @@
         android:label="@string/app_name"
         android:roundIcon="@android:drawable/sym_def_app_icon"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.Material3.DayNight.NoActionBar">
         
         <activity
@@ -35,6 +36,27 @@
 
         <activity
             android:name=".ui.baocao.BaoCaoChartActivity"
+            android:exported="false" />
+
+        <!-- Các màn hình do TV2 phụ trách -->
+        <activity
+            android:name=".ui.tour.TourListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.tour.TourFormActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.suat.SuatListActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.suat.SuatFormActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.danhmuc.HdvListActivity"
             android:exported="false" />
 
     </application>

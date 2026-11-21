@@ -9,6 +9,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
     public static final String TAG = "NhomNoName_Log"; // Chứa mã nhóm chống sao chép
+
+    // CẤU HÌNH ĐỊA CHỈ MÁY CHỦ PRODUCTION (RENDER):
     private static final String BASE_URL = "https://ecotour-nhomnoname-api.onrender.com/"; // Link Render that
     private static Retrofit retrofit;
 

@@ -2,7 +2,7 @@
 -- INT4211: Hệ thống đặt tour du lịch sinh thái Cần Giờ – Vũng Tàu (Đề 23)
 -- Nhóm NoName - Dữ liệu mẫu khởi tạo chuẩn định lượng Đề 23 (backend/seed.sql)
 -- Mật khẩu chung cho tất cả tài khoản: 123456
--- Bcrypt Hash: $2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy
+-- Bcrypt Hash: $2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y
 -- =============================================================================
 
 -- Dọn dẹp dữ liệu cũ trước khi nạp lại
@@ -13,29 +13,29 @@ TRUNCATE TABLE danh_gia, diem_danh_tour, dat_dich_vu, dich_vu_kem, hanh_khach, d
 -- =============================================================================
 INSERT INTO nguoi_dung (email, mat_khau_hash, ho_ten, sdt, vai_tro, tao_luc) VALUES
 -- 4 Tài khoản chính theo phân công Đề 23
-('admin@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Đỗ Lê Tuấn Đạt', '0901234567', 'QUAN_TRI', NOW() - INTERVAL '30 days'),
-('dieuhanh@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nguyễn Nhật Duy', '0902345678', 'DIEU_HANH', NOW() - INTERVAL '30 days'),
-('khach1@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Phan Thị Anh Thư', '0903456789', 'KHACH', NOW() - INTERVAL '30 days'),
-('khach2@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Bùi Quang Duy', '0904567890', 'KHACH', NOW() - INTERVAL '30 days'),
+('admin@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Đỗ Lê Tuấn Đạt', '0901234567', 'QUAN_TRI', NOW() - INTERVAL '30 days'),
+('dieuhanh@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Nguyễn Nhật Duy', '0902345678', 'DIEU_HANH', NOW() - INTERVAL '30 days'),
+('khach1@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Phan Thị Anh Thư', '0903456789', 'KHACH', NOW() - INTERVAL '30 days'),
+('khach2@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Bùi Quang Duy', '0904567890', 'KHACH', NOW() - INTERVAL '30 days'),
 
 -- 7 Hướng dẫn viên khác (đủ 8 HDV theo yêu cầu Đề 23)
-('hdv2@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Trần Hoàng Nam', '0911223344', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
-('hdv3@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Lê Thị Mai Hương', '0912334455', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
-('hdv4@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Phạm Quốc Bảo', '0913445566', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
-('hdv5@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Vũ Minh Tuấn', '0914556677', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
-('hdv6@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Hoàng Thị Yến', '0915667788', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
-('hdv7@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Đặng Văn Khoa', '0916778899', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
-('hdv8@ecotour.vn', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nguyễn Quỳnh Nga', '0917889900', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
+('hdv2@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Trần Hoàng Nam', '0911223344', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
+('hdv3@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Lê Thị Mai Hương', '0912334455', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
+('hdv4@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Phạm Quốc Bảo', '0913445566', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
+('hdv5@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Vũ Minh Tuấn', '0914556677', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
+('hdv6@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Hoàng Thị Yến', '0915667788', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
+('hdv7@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Đặng Văn Khoa', '0916778899', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
+('hdv8@ecotour.vn', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Nguyễn Quỳnh Nga', '0917889900', 'DIEU_HANH', NOW() - INTERVAL '25 days'),
 
 -- Danh sách khách hàng mẫu bổ sung để phát sinh 200 lượt đặt chỗ
-('khach3@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Lê Văn An', '0931000003', 'KHACH', NOW() - INTERVAL '20 days'),
-('khach4@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Trần Thị Bình', '0931000004', 'KHACH', NOW() - INTERVAL '20 days'),
-('khach5@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Nguyễn Văn Cường', '0931000005', 'KHACH', NOW() - INTERVAL '20 days'),
-('khach6@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Phạm Thị Dung', '0931000006', 'KHACH', NOW() - INTERVAL '20 days'),
-('khach7@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Võ Hoàng Em', '0931000007', 'KHACH', NOW() - INTERVAL '20 days'),
-('khach8@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Đặng Thúy Giang', '0931000008', 'KHACH', NOW() - INTERVAL '20 days'),
-('khach9@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Dương Văn Hải', '0931000009', 'KHACH', NOW() - INTERVAL '20 days'),
-('khach10@gmail.com', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 'Đinh Thị Kiều', '0931000010', 'KHACH', NOW() - INTERVAL '20 days');
+('khach3@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Lê Văn An', '0931000003', 'KHACH', NOW() - INTERVAL '20 days'),
+('khach4@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Trần Thị Bình', '0931000004', 'KHACH', NOW() - INTERVAL '20 days'),
+('khach5@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Nguyễn Văn Cường', '0931000005', 'KHACH', NOW() - INTERVAL '20 days'),
+('khach6@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Phạm Thị Dung', '0931000006', 'KHACH', NOW() - INTERVAL '20 days'),
+('khach7@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Võ Hoàng Em', '0931000007', 'KHACH', NOW() - INTERVAL '20 days'),
+('khach8@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Đặng Thúy Giang', '0931000008', 'KHACH', NOW() - INTERVAL '20 days'),
+('khach9@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Dương Văn Hải', '0931000009', 'KHACH', NOW() - INTERVAL '20 days'),
+('khach10@gmail.com', '$2a$10$5Kacplp2NkM7g6W7AZZWxe7SP8XNRZMMp0T8D3kGTvIilCB/LcV8y', 'Đinh Thị Kiều', '0931000010', 'KHACH', NOW() - INTERVAL '20 days');
 
 -- =============================================================================
 -- 2. NẠP 8 HƯỚNG DẪN VIÊN DU LỊCH
